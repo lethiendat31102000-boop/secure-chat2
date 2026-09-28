@@ -25,8 +25,27 @@ export async function createApp({mongoUri,mongoDb,repository,sessionMs=8*3600000
  res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
  // Local teaching app: reject unexpected Host / browser origins, bind loopback in server.js.
- if(!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.host||''))throw error(403,'Host không được phép.');
- if(req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`)throw error(403,'Nguồn yêu cầu không hợp lệ.');
+const publicUrl = process.env.PUBLIC_URL
+  || process.env.RENDER_EXTERNAL_URL;
+
+const allowedOrigin = publicUrl
+  ? new URL(publicUrl).origin
+  : `http://${req.headers.host}`;
+
+const allowedHost = publicUrl
+  ? new URL(publicUrl).host
+  : null;
+
+if (allowedHost
+  ? req.headers.host !== allowedHost
+  : !/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.host || '')
+) {
+  throw error(403, 'Host không được phép.');
+}
+
+if (req.headers.origin && req.headers.origin !== allowedOrigin) {
+  throw error(403, 'Nguồn yêu cầu không hợp lệ.');
+}
  const url=new URL(req.url,'http://localhost'),route=url.pathname;
  if(req.method==='POST'){
  if(req.headers['x-requested-with']!=='SecureChat')throw error(403,'Thiếu header yêu cầu.');
